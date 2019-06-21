@@ -1,5 +1,5 @@
 ###################
-Cryto Exchange
+Crypto Exchange
 ###################
 
 암호화폐 거래소
