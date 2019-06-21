@@ -35,7 +35,7 @@ class Migration_Stock extends CI_Migration {
                         ),
                 ));
                 $this->dbforge->add_key('user_seq', TRUE); //PRIMARY KEY
-                //$this->dbforge->add_key('blog_id'); //KEY INDEX
+                //$this->dbforge->add_key('user_seq'); //KEY INDEX
                 $this->dbforge->create_table('user');
 
                 /*
