@@ -3,7 +3,7 @@
  * @ description : Code Library
  * @ author : prog106 <prog106@haomun.com>
  */
-class Redis_lib {
+class Stock_lib {
     public $server; // redis server info
     public $redis;
 
@@ -19,6 +19,8 @@ class Redis_lib {
         } catch(RedisException $e) {
           $this->redis = null;
         }
+
+        //https://blog.naver.com/parkjy76/30158137553
     } // End constructor
 
     // Create destructor function to disconnect from Redis
@@ -30,25 +32,31 @@ class Redis_lib {
     } // End destructor
 
     public function reset_orders(){
-      $result = $this->redis->zrevrange('BTC_sell', 0, 10, 'withscores');
-      foreach($result as $id=>$score){
-        $this->redis->zrem('BTC_sell', $id); //delete
-      }
+      // $result = $this->redis->zrevrange('BTC_sell', 0, 10, 'withscores');
+      // foreach($result as $id=>$score){
+      //   $this->redis->zrem('BTC_sell', $id); //delete
+      // }
+      //
+      // $result = $this->redis->zrevrange('BTC_buy', 0, 10, 'withscores');
+      // foreach($result as $id=>$score){
+      //   $this->redis->zrem('BTC_buy', $id); //delete
+      // }
+      //
+      // $result = $this->redis->zrange('order_BTC_sell', 0, -1, 'withscores');
+      // foreach($result as $id=>$score){
+      //   $this->redis->zrem('order_BTC_sell', $id); //delete
+      // }
+      //
+      // $result = $this->redis->zrange('order_BTC_buy', 0, -1, 'withscores');
+      // foreach($result as $id=>$score){
+      //   $this->redis->zrem('order_BTC_buy', $id); //delete
+      // }
+      //
+      // for($i=0; $i<100; $i++){
+      //   $this->redis->del('order_list_'.$i);
+      // }
 
-      $result = $this->redis->zrevrange('BTC_buy', 0, 10, 'withscores');
-      foreach($result as $id=>$score){
-        $this->redis->zrem('BTC_buy', $id); //delete
-      }
-
-      $result = $this->redis->zrange('order_BTC_sell', 0, -1, 'withscores');
-      foreach($result as $id=>$score){
-        $this->redis->zrem('order_BTC_sell', $id); //delete
-      }
-
-      $result = $this->redis->zrange('order_BTC_buy', 0, -1, 'withscores');
-      foreach($result as $id=>$score){
-        $this->redis->zrem('order_BTC_buy', $id); //delete
-      }
+      $this->redis->FLUSHDB();
 
       $CI =& get_instance();
       $CI->db->truncate('order_BTC');
@@ -76,7 +84,7 @@ class Redis_lib {
             //
             // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, $order_price);
 
-            $this->order($coin_code, $base_code, 'sell', $order_price, 0.001*100000000);
+            $this->order($coin_code, $base_code, 'sell', $order_price, 0.001);
           }
 
           // 매수 주문
@@ -89,7 +97,7 @@ class Redis_lib {
             // $CI->db->query($sql);
             // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, $order_price);
 
-            $this->order($coin_code, $base_code, 'buy', $order_price, 0.001*100000000);
+            $this->order($coin_code, $base_code, 'buy', $order_price, 0.001);
           }
 
           // order book
@@ -123,16 +131,12 @@ class Redis_lib {
       $CI =& get_instance();
 
       $user_seq = $CI->session->userdata('user_seq');
-      $order_qty_db = $order_qty / 100000000;
+      $order_qty_db = $order_qty ;
 
       try {
+          // 주문
+          // 호가, 주문 목록, 주문 상세
           $CI->db->trans_begin();
-
-          // $sql = "INSERT INTO order_$coin_code
-          // (`user_seq`, `coin_code`, `base_code`, `trade_code`, `order_status`, `order_price`, `order_qty`, `unexe_qty`)
-          // VALUES
-          // ($user_seq, '$coin_code', '$base_code','$trade_code','01', $order_price, $order_qty_db, $order_qty_db)";
-          // $CI->db->query($sql);
 
           $data = array(
                   'user_seq' => $user_seq,
@@ -158,17 +162,25 @@ class Redis_lib {
           //var_dump($redis->hMGet('user_list', array('uid4', 'uid5')));
           //var_dump($redis->hGetAll('user_list'));
 
+          $this->redis->hmset('order_list_'.$order_seq, $data);
+          $this->redis->zincrby($coin_code.'_'.$trade_code, $order_qty * 100000000 , $order_price);
 
-          $this->redis->zincrby($coin_code.'_'.$trade_code, $order_qty, $order_price);
+          //$this->trade($coin_code, $base_code, $trade_code, $order_price, $order_qty);
 
           $CI->db->trans_commit();
+
+          $return_data = 'success';
       } catch(Exception $e) {
           if(!empty($e->getCode())){
             $CI->db->trans_rollback();
             $this->reset_orders();
+
+            $return_data = 'fail';
           }
       }
 
+      return $return_data;
+      #sort order_BTC_sell get # get order_list_*->user_seq get order_list_*->trade_code
     }
 
     public function trade($coin_code, $base_code, $trade_code, $order_price, $order_qty){
@@ -526,12 +538,92 @@ class Redis_lib {
          //array_push($result['sell'], array('order_seq'=>$id, 'price'=>$score));
          array_push($order_seq_list, $id);
       }
-
+      // zrange order_BTC_buy 0 -1
       $order_buy = $this->redis->zrange('order_'.$coin_code.'_buy', 0, -1, 'withscores');
       foreach($order_buy as $id=>$score){
         //array_push($result['buy'], array('order_seq'=>$id, 'price'=>$score));
         array_push($order_seq_list, $id);
       }
+
+      $params = array(
+        '#',
+        'order_list_*->user_seq',
+        'order_list_*->coin_code',
+        'order_list_*->base_code',
+        'order_list_*->trade_code',
+        'order_list_*->order_status',
+        'order_list_*->order_price',
+        'order_list_*->order_qty',
+        'order_list_*->unexe_qty',
+      );
+      $options = array(
+        // 'by' => 'some_pattern_*',
+        // 'limit' => array(0, 1),
+        'get' => $params, //'order_list_*' or an array of patterns,
+        // 'sort' => 'asc' or 'desc',
+        // 'alpha' => TRUE,
+        // 'store' => 'external-key'
+        //'store' => 'list'
+      );
+
+      // sort order_BTC_buy get (zrange order_BTC_buy 0 -1)
+
+      $order_list_sell = $this->redis->sort('order_'.$coin_code.'_sell', $options);
+      $order_list_buy = $this->redis->sort('order_'.$coin_code.'_buy', $options);
+
+      $order_list = array_merge($order_list_sell, $order_list_buy);
+
+      #sort order_BTC_sell get # get order_list_*->user_seq get order_list_*->trade_code
+      //log_message($order_list);
+      $i = 0;
+      $data = array();
+      foreach($order_list as $k=>$v){
+        //array_push($result['buy'], array('order_seq'=>$id, 'price'=>$score));
+        if($i <= 8){
+          switch ($i) {
+            case 0:
+              $key = 'order_seq';
+              break;
+            case 1:
+              $key = 'user_seq';
+              break;
+            case 2:
+              $key = 'coin_code';
+              break;
+            case 3:
+              $key = 'base_code';
+              break;
+            case 4:
+              $key = 'trade_code';
+              break;
+            case 5:
+              $key = 'order_status';
+              break;
+            case 6:
+              $key = 'order_price';
+              break;
+            case 7:
+              $key = 'order_qty';
+              break;
+            case 8:
+              $key = 'unexe_qty';
+              break;
+          }
+          $data[$key] = $v;
+
+          if($i==8){
+            array_push($result, $data);
+            $i=0;
+            $data = array();
+          }else{
+            $i++;
+          }
+        }
+      }
+      array_multisort(array_column($result, 'order_price'), SORT_DESC,
+                      array_column($result, 'order_seq'), SORT_ASC,
+                      $result);
+      return $result;
 
       if(count($order_seq_list) > 0){
         $CI =& get_instance();
@@ -546,6 +638,7 @@ class Redis_lib {
           //array_push($result['sell'], $key);
         }
       }
+
 
       return $result;
     }
