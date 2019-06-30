@@ -1,7 +1,7 @@
 
 	<!-- <h1>Welcome to STOCK!</h1> -->
 
-	
+
 
 		<div class="row">
 		  <div class="col-sm-6">
@@ -9,7 +9,7 @@
 		      <div class="card-body">
 						<div class="row">
 							<div class="col-sm-6">
-						    가격 : <input type=text id='price' value='9000000'>
+						    가격 : <input type=text id='price' value='8000000'>
 						    <br>
 						    수량 : <input type=text id='qty' value='0.001'>
 							</div>
@@ -153,8 +153,8 @@
 							html += "<tr style='color:red;'><td style='width:120px;'>SELL</td>";
 						}
 
-						html += "<td style='width:120px;'>" + obj[key]['od_seq'] + "</td>";
-		    		html += "<td style='width:120px;'>" + obj[key]['ord_price'] + "</td>";
+						html += "<td style='width:120px;'>" + obj[key]['order_seq'] + "</td>";
+		    		html += "<td style='width:120px;'>" + obj[key]['order_price'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['unexe_qty'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['user_seq'] + "</td>";
 		    		html += "</tr>";
@@ -162,7 +162,7 @@
 
 		    	// for(key in buy) {
 		    	// 	html += "<tr style='color:blue;'><td style='width:120px;'>BUY</td>";
-		    	// 	html += "<td style='width:120px;'>" + buy[key]['od_seq'] + "</td>";
+		    	// 	html += "<td style='width:120px;'>" + buy[key]['order_seq'] + "</td>";
 		    	// 	html += "<td style='width:120px;'>" + buy[key]['price'] + "</td>";
 		    	// 	html += "</tr>";
 		    	// }
