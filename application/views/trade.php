@@ -1,7 +1,7 @@
 
 	<!-- <h1>Welcome to STOCK!</h1> -->
 
-
+	<div id="body">
 
 		<div class="row">
 		  <div class="col-sm-6">
@@ -9,18 +9,17 @@
 		      <div class="card-body">
 						<div class="row">
 							<div class="col-sm-6">
-						    가격 : <input type=text id='price' value='8000000'>
+						    가격 : <input type=text id='price' value='9000000'>
 						    <br>
 						    수량 : <input type=text id='qty' value='0.001'>
 							</div>
 
 					    <div class="col-sm-6">
-								<!-- <a class="btn btn-lg btn-primary" href="./" role="button">button &raquo;</a> -->
-								<button type="button" class="btn btn-sm btn-primary" id='reset_orders'>초기화</button>
-								<button type="button" class="btn btn-sm btn-secondary" id='set_orders'>호가 셋팅</button>
+								<button id='reset_orders'>초기화</button>
+								<button id='set_orders'>호가 셋팅</button>
 								<br>
-						    <button type="button" class="btn btn-sm btn-success" id='order_sell'>매도</button>
-						    <button type="button" class="btn btn-sm btn-info" id='order_buy'>매수</button>
+						    <button id='order_sell'>매도</button>
+						    <button id='order_buy'>매수</button>
 							</div>
 						</div>
 
@@ -30,11 +29,7 @@
 		  <div class="col-sm-6">
 		    <div class="card">
 		      <div class="card-body">
-						<button type="button" class="btn btn-sm btn-link" id='get_trade_list'>자산 정보 가져오기</button>
-
-						<button type="button" class="btn btn-light">Light</button>
-						<button type="button" class="btn btn-dark">Dark</button>
-
+		        	자산
 		      </div>
 		    </div>
 		  </div>
@@ -46,7 +41,7 @@
 		  <div class="col-sm-6">
 		    <div class="card">
 		      <div class="card-body">
-						<button type="button" class="btn btn-sm btn-warning" id='get_order_book'>호가 가져오기</button>
+						<button id='get_order_book'>호가 가져오기</button>
 						<div class='order_book' id='order_book'>
 							호가 리스트
 						</div>
@@ -56,7 +51,7 @@
 		  <div class="col-sm-6">
 		    <div class="card">
 		      <div class="card-body">
-						<button type="button" class="btn btn-sm btn-danger" id='get_trade_list'>미체결 가져오기</button>
+						<button id='get_trade_list'>미체결 가져오기</button>
 						<div class='trade_list' id='trade_list'>
 							체결 / 미체결
 						</div>
@@ -65,6 +60,7 @@
 		  </div>
 		</div>
 
+	</div>
 
     <script>
     function draw_order_book(obj){
@@ -139,7 +135,7 @@
 		    	html += "<td style='width:120px;'> 주문번호 </td>";
 		    	html += "<td style='width:120px;'> 주문가격 </td>";
 					html += "<td style='width:120px;'> 주문수량 </td>";
-					html += "<td style='width:120px;'> 회원번호 </td>";
+					html += "<td style='width:120px;'> 주문회원번호 </td>";
 		    	html += "</tr>";
 		    	html += "<br>";
 
@@ -153,8 +149,8 @@
 							html += "<tr style='color:red;'><td style='width:120px;'>SELL</td>";
 						}
 
-						html += "<td style='width:120px;'>" + obj[key]['order_seq'] + "</td>";
-		    		html += "<td style='width:120px;'>" + obj[key]['order_price'] + "</td>";
+						html += "<td style='width:120px;'>" + obj[key]['od_seq'] + "</td>";
+		    		html += "<td style='width:120px;'>" + obj[key]['ord_price'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['unexe_qty'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['user_seq'] + "</td>";
 		    		html += "</tr>";
@@ -162,7 +158,7 @@
 
 		    	// for(key in buy) {
 		    	// 	html += "<tr style='color:blue;'><td style='width:120px;'>BUY</td>";
-		    	// 	html += "<td style='width:120px;'>" + buy[key]['order_seq'] + "</td>";
+		    	// 	html += "<td style='width:120px;'>" + buy[key]['od_seq'] + "</td>";
 		    	// 	html += "<td style='width:120px;'>" + buy[key]['price'] + "</td>";
 		    	// 	html += "</tr>";
 		    	// }

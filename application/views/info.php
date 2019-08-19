@@ -10,10 +10,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <body>
 
 <div id="container">
+	<h1>Welcome to STOCK!</h1>
 
 	<div id="body">
-		<h1>Welcome to STOCK!</h1>
-		
 		<code>
 		</code>
 
@@ -70,46 +69,40 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 			$ npm install -g forever
 
 
-			* redis
-			- 주문
-			- 호가
+		* redis
+		- 주문
+		- 호가
 
-			- 체결
+		- 체결
 
-			* db
-			- 주문
-			- 호가
+		* db
+		- 주문
+		- 호가
 
-			- 체결
-
-
-			* websocket
-			- 호가
-			- 체결, 미체결
-			- 자산 : 잔고
-
-			* 시세
-			- 고가, 저가, 종가, 현재가, 전일대비, 거래대금
+		- 체결
 
 
+		* websocket
+		- 호가
+		- 체결, 미체결
+		- 자산 : 잔고
 
-			==================
-			참고 :
-			https://bkim.tistory.com/18
+		* 시세
+		- 고가, 저가, 종가, 현재가, 전일대비, 거래대금
 
-			https://github.com/ericoc/old-stock-quotes-php-lib/blob/master/stock_quotes.class.php
 
-			https://bluenoon.tistory.com/27
-		</pre>
-	
-	<a href="https://mdbootstrap.com/docs/jquery/components/buttons/" target="_blank">button style</a>
-	
+
+		==================
+		참고 :
+		https://bkim.tistory.com/18
+
+		https://github.com/ericoc/old-stock-quotes-php-lib/blob/master/stock_quotes.class.php
+
+		https://bluenoon.tistory.com/27
+	</pre>
 	</div>
 
 </div>
-
-
-
 
 </body>
 </html>

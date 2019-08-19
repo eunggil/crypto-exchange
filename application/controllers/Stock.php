@@ -46,15 +46,6 @@ class Stock extends CI_Controller {
 		echo json_encode($result);
 	}
 
-	public function trade_list(){
-		$coin_code = $this->input->post('coin_code', true);
-
-		$result = array();
-		$result = $this->stock_lib->trade_list($coin_code);
-
-		echo json_encode($result);
-	}
-
 	public function order()
 	{
 		$trade_code = $this->input->post('trade_type', true);
@@ -64,9 +55,8 @@ class Stock extends CI_Controller {
 		//$user_srl = $this->input->post('user_srl', true);
 		$base_code = "KRW";
 
-		$this->stock_lib->order($coin_code, $base_code, $trade_code, $price, $qty);
-		echo json_encode(array('success' => true, ));
-
+		$result_data = $this->stock_lib->order($coin_code, $base_code, $trade_code, $price, $qty * 100000000);
+		echo json_encode($result_data);
 	}
 
 	// public function sell()
@@ -88,6 +78,27 @@ class Stock extends CI_Controller {
 	//
 	// 	echo $this->stock_lib->buy($coin_code, $price, $qty, $user_srl);
 	// }
+
+	public function trade_list(){
+		$coin_code = $this->input->post('coin_code', true);
+
+		$result = array();
+		$result = $this->stock_lib->trade_list($coin_code);
+
+		echo json_encode($result);
+	}
+
+	public function get_wallet(){
+		$coin_code = $this->input->post('coin_code', true);
+		$user_seq = $this->session->userdata('user_seq');
+
+		$result = array();
+		$this->db->where_in('user_seq', $user_seq);
+		$query = $this->db->get('wallet_'.$coin_code);
+		$result = $query->result_array();
+
+		echo json_encode($result);
+	}
 
 	public function test(){
 		$this->server['address'] = "192.168.0.200";//"192.168.0.11";
@@ -138,5 +149,7 @@ class Stock extends CI_Controller {
       echo "connect fail";
 		}
 	}
+
+
 
 }

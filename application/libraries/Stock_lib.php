@@ -19,8 +19,6 @@ class Stock_lib {
         } catch(RedisException $e) {
           $this->redis = null;
         }
-
-        //https://blog.naver.com/parkjy76/30158137553
     } // End constructor
 
     // Create destructor function to disconnect from Redis
@@ -32,30 +30,6 @@ class Stock_lib {
     } // End destructor
 
     public function reset_orders(){
-      // $result = $this->redis->zrevrange('BTC_sell', 0, 10, 'withscores');
-      // foreach($result as $id=>$score){
-      //   $this->redis->zrem('BTC_sell', $id); //delete
-      // }
-      //
-      // $result = $this->redis->zrevrange('BTC_buy', 0, 10, 'withscores');
-      // foreach($result as $id=>$score){
-      //   $this->redis->zrem('BTC_buy', $id); //delete
-      // }
-      //
-      // $result = $this->redis->zrange('order_BTC_sell', 0, -1, 'withscores');
-      // foreach($result as $id=>$score){
-      //   $this->redis->zrem('order_BTC_sell', $id); //delete
-      // }
-      //
-      // $result = $this->redis->zrange('order_BTC_buy', 0, -1, 'withscores');
-      // foreach($result as $id=>$score){
-      //   $this->redis->zrem('order_BTC_buy', $id); //delete
-      // }
-      //
-      // for($i=0; $i<100; $i++){
-      //   $this->redis->del('order_list_'.$i);
-      // }
-
       $this->redis->FLUSHDB();
 
       $CI =& get_instance();
@@ -76,48 +50,16 @@ class Stock_lib {
           // 매도 주문
           for($i=1; $i<=10; $i++){
             $order_price = ($i*100000) + 9000000;
-            // $sql = "INSERT INTO order_BTC
-            //           (`user_seq`, `coin_code`, `base_code`, `trade_code`, `order_status`, `order_price`, `order_qty`, `unexe_qty`)
-            //         values
-            //           (1, '$coin_code', '$base_code','sell','01', $order_price, 0.001, 0.001)";
-            // $CI->db->query($sql);
-            //
-            // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, $order_price);
-
-            $this->order($coin_code, $base_code, 'sell', $order_price, 0.001);
+            $this->order($coin_code, $base_code, 'sell', $order_price, 0.001*100000000);
           }
 
           // 매수 주문
           for($i=1; $i<=10; $i++){
             $order_price = ($i*100000) + 7900000;
-            // $sql = "INSERT INTO order_BTC
-            //           (`user_seq`, `coin_code`, `base_code`, `trade_code`, `order_status`, `order_price`, `order_qty`, `unexe_qty`)
-            //         VALUES
-            //           (1, '$coin_code', '$base_code','buy','01', $order_price, 0.001, 0.001)";
-            // $CI->db->query($sql);
-            // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, $order_price);
-
-            $this->order($coin_code, $base_code, 'buy', $order_price, 0.001);
+            $this->order($coin_code, $base_code, 'buy', $order_price, 0.001*100000000);
           }
 
-          // order book
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9000000);
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9100000);
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9200000);
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9300000);
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9400000);
-          // $this->redis->zincrby($coin_code.'_sell', 0.001*100000000, 9500000);
-          //
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8900000);
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8800000);
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8700000);
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8600000);
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8500000);
-          // $this->redis->zincrby($coin_code.'_buy', 0.001*100000000, 8400000);
-
           $CI->db->trans_commit();
-
-
       } catch(Exception $e) {
           if(!empty($e->getCode())){
             $CI->db->trans_rollback();
@@ -128,62 +70,311 @@ class Stock_lib {
     }
 
     public function order($coin_code, $base_code, $trade_code, $order_price, $order_qty){
+      $datetime = date("Y-m-d H:i:s");
+
       $CI =& get_instance();
 
       $user_seq = $CI->session->userdata('user_seq');
-      $order_qty_db = $order_qty ;
+      $order_qty_db = $order_qty / 100000000;
+
+      $trade_all_list = array();
+      $trade_part_list = array();
 
       try {
-          // 주문
-          // 호가, 주문 목록, 주문 상세
-          $CI->db->trans_begin();
 
-          $data = array(
-                  'user_seq' => $user_seq,
-                  'coin_code' => $coin_code,
-                  'base_code' => $base_code,
-                  'trade_code' => $trade_code,
-                  'order_status' => '01',
-                  'order_price' => $order_price,
-                  'order_qty' => $order_qty_db,
-                  'unexe_qty' => $order_qty_db,
-          );
+          if($trade_code == 'sell'){
+            // sell(매도) 주문일 때, 매수 미체결 조회 후 주문금액 보다 큰 매수금액 부터 주문금액까지 체결
+            // 매수 미체결 조회 ( 매수금액 >= $order_price )
+            $order_list = $this->redis->zrangebyscore('order_'.$coin_code.'_buy', $order_price, '+inf', array('withscores'=>true));
 
-          $CI->db->insert('order_'.$coin_code, $data);
-          $order_seq = $CI->db->insert_id();
+            // 매수 미체결 건 있으면 ...
+            // 조회 결과 내역이 있으면 체결 ()
+            if($order_list && count($order_list) > 0){
 
-          $this->redis->zAdd('order_'.$coin_code.'_'.$trade_code, $order_price, $order_seq);
+              // 매수 미체결 주문 정보 조회
+              $return_data = array();
+              foreach ($order_list as $key => $value) {
+                $order_data = $this->redis->hgetall('order_list_'.$key);
+                $order_data['order_seq'] = $key;
+                // $order_data['order_price']
+                // $order_data['order_qty']
+                // $order_data['order_status']
+                // $order_data['unexe_qty']
+                array_push($return_data, $order_data);
+              }
 
-          //$this->redis->hset('order_'.$coin_code.'_'.$trade_code, $order_qty, $order_price);
-          //여러개 HASH 데이터 한번에 입력
-          //$this->redis->hMset('order_'.$coin_code.'_'.$trade_code, array('user_seq' => $user_seq, 'order_seq' =>$order_seq));
+              // 주문 금액 / 주문 순서 정렬
+              $return_data = array_msort($return_data, array('order_price'=>SORT_DESC, 'order_seq'=>SORT_ASC));
 
-          //여러개 HASH 데이터를 한번에 가져옴
-          //var_dump($redis->hMGet('user_list', array('uid4', 'uid5')));
-          //var_dump($redis->hGetAll('user_list'));
+              foreach ($return_data as $key => $value) {
+                // $order_qty 만큼 채결
+                if($order_qty_db <= 0) continue;
+                if($order_qty_db >= $value['unexe_qty']){
+                  // 전체 체결
+                  $order_qty_db = $order_qty_db - ($value['unexe_qty'] * 1);
+                  $value['exe_qty'] = $value['unexe_qty'] * 1;
+                  $value['unexe_qty'] = 0;
+                  array_push($trade_all_list, $value);
+                }else{
+                  // 부분 체결
+                  $value['exe_qty'] = $value['unexe_qty'] * 1;
+                  $value['unexe_qty'] = ($value['unexe_qty'] * 1) - $order_qty_db;
+                  $order_qty_db = 0;
+                  array_push($trade_part_list, $value);
+                }
 
-          $this->redis->hmset('order_list_'.$order_seq, $data);
-          $this->redis->zincrby($coin_code.'_'.$trade_code, $order_qty * 100000000 , $order_price);
+              }
 
-          //$this->trade($coin_code, $base_code, $trade_code, $order_price, $order_qty);
+            } // 매수 체결 처리 끝
 
-          $CI->db->trans_commit();
+          } // sell(매도) 주문 처리 끝
 
-          $return_data = 'success';
+          if($trade_code == 'buy'){
+            // buy(매수) 주문일 때, 매도 미체결 조회 후 주문금액 보다 작은 매도금액 부터 주문금액까지 체결
+            // 매도 미체결 조회 ( 매도금액 <= $order_price )
+            $order_list = $this->redis->zrangebyscore('order_'.$coin_code.'_sell', '-inf', $order_price, array('withscores'=>true));
+
+            // 매도 미체결 건 있으면 ...
+            // 조회 결과 내역이 있으면 체결 ()
+            if($order_list && count($order_list) > 0){
+
+                $return_data = array();
+                foreach ($order_list as $key => $value) {
+                  // 조회 결과 내역이 있으면 체결 ()
+                  $order_data = $this->redis->hgetall('order_list_'.$key);
+                  $order_data['order_seq'] = $key;
+                  array_push($return_data, $order_data);
+                }
+
+                // 주문 금액 / 주문 순서 정렬
+                $return_data = array_msort($return_data, array('order_price'=>SORT_ASC, 'order_seq'=>SORT_ASC));
+
+                foreach ($return_data as $key => $value) {
+                  // $order_qty 만큼 채결
+                  if($order_qty_db <= 0) continue;
+                  if($order_qty_db >= $value['unexe_qty']){
+                    // 전체 체결
+                    $order_qty_db = $order_qty_db - ($value['unexe_qty'] * 1);
+                    $value['exe_qty'] = $value['unexe_qty'] * 1;
+                    $value['unexe_qty'] = 0;
+
+                    array_push($trade_all_list, $value);
+
+                  }else{
+                    // 부분 체결
+                    $value['exe_qty'] = $value['unexe_qty'] * 1;
+                    $value['unexe_qty'] = ($value['unexe_qty'] * 1) - $order_qty_db;
+                    $order_qty_db = 0;
+                    array_push($trade_part_list, $value);
+                  }
+
+                }
+
+              } // 매도 체결 끝
+          } // 매수 주문 처리 끝
+
+          ////////////////////////////////////////
+          // 남은거 미체결건 처리
+          ////////////////////////////////////////
+          if($order_qty_db > 0){
+            // 체결 후 남은 수량 : 남은 건 미체결 주문으로 처리
+            $CI->db->trans_begin();
+            $data = array(
+              'user_seq' => $user_seq,
+              'coin_code' => $coin_code,
+              'base_code' => $base_code,
+              'trade_code' => $trade_code,
+              'order_status' => '01',
+              'order_price' => $order_price,
+              'order_qty' => ($order_qty / 100000000),
+              'unexe_qty' => $order_qty_db,
+            );
+
+            $CI->db->insert('order_'.$coin_code, $data);
+            $order_seq = $CI->db->insert_id();
+
+            $this->redis->zAdd('order_'.$coin_code.'_'.$trade_code, $order_price, $order_seq);
+
+            $this->redis->hmset('order_list_'.$order_seq, $data);
+            $this->redis->zincrby($coin_code.'_'.$trade_code, ($order_qty_db * 100000000), $order_price);
+
+            $CI->db->trans_commit();
+          }
+
+          ////////////////////////////////////////
+          // 체결 내역 처리
+          ////////////////////////////////////////
+          
+          // 전체 체결 내역 DB처리
+          if(count($trade_all_list) > 0){
+            // 체결 내역 DB 처리
+            $trade_all_list_seq = array();
+            $insert_data = array();
+            foreach ($trade_all_list as $key => $value) {
+              $insert_row = array();
+              $insert_row['order_seq'] = $value['order_seq'];
+              $insert_row['trade_code'] = $trade_code;
+              $insert_row['fuser_seq'] = $value['user_seq'];
+              $insert_row['tuser_seq'] = $user_seq;
+              $insert_row['coin_code'] = $value['coin_code'];
+              $insert_row['base_code'] = $value['base_code'];
+              $insert_row['price'] = $value['order_price'];
+              $insert_row['qty'] = $value['exe_qty'];
+              $insert_row['reg_date'] = $datetime;
+
+              array_push($insert_data, $insert_row);
+              array_push($trade_all_list_seq, $value['order_seq']);
+            }
+
+            $CI->db->insert_batch('trade_'.$coin_code, $insert_data);
+
+            $data = array(
+              'order_status' => '03', // 전체 체결
+              'unexe_qty' => 0,
+              'update_date' => $datetime
+            );
+
+            $CI->db->where_in('order_seq', $trade_all_list_seq);
+            $CI->db->update('order_'.$coin_code, $data);
+
+          }
+
+          // 부분 체결 내역 DB 처리
+          if(count($trade_part_list) > 0){
+            $value = $trade_part_list[0];
+
+            $insert_data = array();
+            $insert_row = array();
+            $insert_row['order_seq'] = $value['order_seq'];
+            $insert_row['trade_code'] = $trade_code;
+            $insert_row['fuser_seq'] = $value['user_seq'];
+            $insert_row['tuser_seq'] = $user_seq;
+            $insert_row['coin_code'] = $value['coin_code'];
+            $insert_row['base_code'] = $value['base_code'];
+            $insert_row['price'] = $value['order_price'];
+            $insert_row['qty'] = $value['exe_qty'];
+            $insert_row['reg_date'] = $datetime;
+
+            array_push($insert_data, $insert_row);
+            $CI->db->insert_batch('trade_'.$coin_code, $insert_data);
+
+            $data = array(
+              'order_status' => '02', // 부분 체결
+              'unexe_qty' => $value['unexe_qty'],
+              'update_date' => $datetime
+            );
+
+            $CI->db->where('order_seq', $value['order_seq']);
+            $CI->db->update('order_'.$coin_code, $data);
+          }
+
       } catch(Exception $e) {
           if(!empty($e->getCode())){
             $CI->db->trans_rollback();
             $this->reset_orders();
-
-            $return_data = 'fail';
           }
       }
 
-      return $return_data;
-      #sort order_BTC_sell get # get order_list_*->user_seq get order_list_*->trade_code
+      return $data;
     }
 
+
+    public function order_book($coin_code='BTC'){
+      $result = array();
+      $result['sell'] = array();
+      $result['buy'] = array();
+
+      // 매도 호가
+      $order_sell = $this->redis->zrange($coin_code.'_sell', 0, -1, 'withscores');
+      krsort($order_sell);
+
+      foreach($order_sell as $id=>$score){
+         array_push($result['sell'], array('price'=>$id, 'qty'=>($score / 100000000)));
+      }
+
+      // 매수 호가
+      $order_buy = $this->redis->zrevrange($coin_code.'_buy', 0, -1, 'withscores');
+      krsort($order_buy);
+
+      foreach($order_buy as $id=>$score){
+        array_push($result['buy'], array('price'=>$id, 'qty'=>($score / 100000000)));
+      }
+
+      return $result;
+    }
+
+    public function trade_list($coin_code){
+      $result = array();
+
+      $params = array(
+        '#',
+        'order_list_*->user_seq',
+        'order_list_*->coin_code',
+        'order_list_*->base_code',
+        'order_list_*->trade_code',
+        'order_list_*->order_status',
+        'order_list_*->order_price',
+        'order_list_*->order_qty',
+        'order_list_*->unexe_qty',
+      );
+      $options = array(
+        'get' => $params,
+      );
+
+      $order_list = $this->redis->sort('order_'.$coin_code.'_sell', $options);
+
+      $loop_count = count($order_list) / 9;
+      for($i=0; $i<$loop_count; $i++){
+          $data = array(
+            'order_seq'=>$order_list[0+($i*9)],
+            'user_seq'=>$order_list[1+($i*9)],
+            'coin_code'=>$order_list[2+($i*9)],
+            'base_code'=>$order_list[3+($i*9)],
+            'trade_code'=>$order_list[4+($i*9)],
+            'order_status'=>$order_list[5+($i*9)],
+            'order_price'=>$order_list[6+($i*9)],
+            'order_qty'=>$order_list[7+($i*9)],
+            'unexe_qty'=>$order_list[8+($i*9)],
+          );
+          array_push($result, $data);
+      }
+
+      $order_list = $this->redis->sort('order_'.$coin_code.'_buy', $options);
+      $loop_count = count($order_list) / 9;
+      for($i=0; $i<$loop_count; $i++){
+          $data = array(
+            'order_seq'=>$order_list[0+($i*9)],
+            'user_seq'=>$order_list[1+($i*9)],
+            'coin_code'=>$order_list[2+($i*9)],
+            'base_code'=>$order_list[3+($i*9)],
+            'trade_code'=>$order_list[4+($i*9)],
+            'order_status'=>$order_list[5+($i*9)],
+            'order_price'=>$order_list[6+($i*9)],
+            'order_qty'=>$order_list[7+($i*9)],
+            'unexe_qty'=>$order_list[8+($i*9)],
+          );
+          array_push($result, $data);
+      }
+
+      return $result;
+    }
+
+    ////////////////////////////////////////////////////////
+    //
+    ////////////////////////////////////////////////////////
+
+
     public function trade($coin_code, $base_code, $trade_code, $order_price, $order_qty){
+
+      // $trade_code : sell, buy
+      // sell(매도) 주문일 때, 매수 미체결 조회 후 주문금액 보다 큰 매수금액 부터 주문금액까지 체결
+      if($trade_code == 'sell'){
+          // 매수 미체결 조회 ( 매수금액 >= $order_price)
+          // 조회 결과 내역이 있으면 체결 ()
+      }
+
+
+      // buy(매수) 주문일 때, 매도 미체결 조회 후 주문금액 보다 작은 매도금액 부터 주문금액까지 체결
 
       $CI =& get_instance();
 
@@ -256,30 +447,6 @@ class Stock_lib {
             $this->reset_orders();
           }
       }
-    }
-
-    public function order_book($coin_code='BTC'){
-      $result = array();
-      $result['sell'] = array();
-      $result['buy'] = array();
-
-      // 매도 호가
-      $order_sell = $this->redis->zrange($coin_code.'_sell', 0, -1, 'withscores');
-      krsort($order_sell);
-
-      foreach($order_sell as $id=>$score){
-         array_push($result['sell'], array('price'=>$id, 'qty'=>($score / 100000000)));
-      }
-
-      // 매수 호가
-      $order_buy = $this->redis->zrevrange($coin_code.'_buy', 0, -1, 'withscores');
-      krsort($order_buy);
-
-      foreach($order_buy as $id=>$score){
-        array_push($result['buy'], array('price'=>$id, 'qty'=>($score / 100000000)));
-      }
-
-      return $result;
     }
 
     public function sell($coin_code='BTC', $price, $qty, $user_srl=1){
@@ -526,121 +693,6 @@ class Stock_lib {
 
     }
 
-    public function trade_list($coin_code){
-      $result = array();
-      //$result['sell'] = array();
-      //$result['buy'] = array();
 
-      $order_seq_list = array();
-
-      $order_sell = $this->redis->zrange('order_'.$coin_code.'_sell', 0, -1, 'withscores');
-      foreach($order_sell as $id=>$score){
-         //array_push($result['sell'], array('order_seq'=>$id, 'price'=>$score));
-         array_push($order_seq_list, $id);
-      }
-      // zrange order_BTC_buy 0 -1
-      $order_buy = $this->redis->zrange('order_'.$coin_code.'_buy', 0, -1, 'withscores');
-      foreach($order_buy as $id=>$score){
-        //array_push($result['buy'], array('order_seq'=>$id, 'price'=>$score));
-        array_push($order_seq_list, $id);
-      }
-
-      $params = array(
-        '#',
-        'order_list_*->user_seq',
-        'order_list_*->coin_code',
-        'order_list_*->base_code',
-        'order_list_*->trade_code',
-        'order_list_*->order_status',
-        'order_list_*->order_price',
-        'order_list_*->order_qty',
-        'order_list_*->unexe_qty',
-      );
-      $options = array(
-        // 'by' => 'some_pattern_*',
-        // 'limit' => array(0, 1),
-        'get' => $params, //'order_list_*' or an array of patterns,
-        // 'sort' => 'asc' or 'desc',
-        // 'alpha' => TRUE,
-        // 'store' => 'external-key'
-        //'store' => 'list'
-      );
-
-      // sort order_BTC_buy get (zrange order_BTC_buy 0 -1)
-
-      $order_list_sell = $this->redis->sort('order_'.$coin_code.'_sell', $options);
-      $order_list_buy = $this->redis->sort('order_'.$coin_code.'_buy', $options);
-
-      $order_list = array_merge($order_list_sell, $order_list_buy);
-
-      #sort order_BTC_sell get # get order_list_*->user_seq get order_list_*->trade_code
-      //log_message($order_list);
-      $i = 0;
-      $data = array();
-      foreach($order_list as $k=>$v){
-        //array_push($result['buy'], array('order_seq'=>$id, 'price'=>$score));
-        if($i <= 8){
-          switch ($i) {
-            case 0:
-              $key = 'order_seq';
-              break;
-            case 1:
-              $key = 'user_seq';
-              break;
-            case 2:
-              $key = 'coin_code';
-              break;
-            case 3:
-              $key = 'base_code';
-              break;
-            case 4:
-              $key = 'trade_code';
-              break;
-            case 5:
-              $key = 'order_status';
-              break;
-            case 6:
-              $key = 'order_price';
-              break;
-            case 7:
-              $key = 'order_qty';
-              break;
-            case 8:
-              $key = 'unexe_qty';
-              break;
-          }
-          $data[$key] = $v;
-
-          if($i==8){
-            array_push($result, $data);
-            $i=0;
-            $data = array();
-          }else{
-            $i++;
-          }
-        }
-      }
-      array_multisort(array_column($result, 'order_price'), SORT_DESC,
-                      array_column($result, 'order_seq'), SORT_ASC,
-                      $result);
-      return $result;
-
-      if(count($order_seq_list) > 0){
-        $CI =& get_instance();
-        $CI->db->where_in('order_seq', $order_seq_list);
-        $CI->db->order_by('order_seq', 'asc');
-        $query = $CI->db->get('order_'.$coin_code);
-        $result = $query->result_array();
-
-
-        foreach ($result as $key => $value) {
-          //array_push($result['sell'], array('order_seq'=>$value['order_seq'], 'price'=>$value['order_price'], 'qty'=>$value['unexec_qty'], 'user_seq'=>$value['user_seq']));
-          //array_push($result['sell'], $key);
-        }
-      }
-
-
-      return $result;
-    }
 
 }

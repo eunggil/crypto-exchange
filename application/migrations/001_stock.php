@@ -35,7 +35,7 @@ class Migration_Stock extends CI_Migration {
                         ),
                 ));
                 $this->dbforge->add_key('user_seq', TRUE); //PRIMARY KEY
-                //$this->dbforge->add_key('user_seq'); //KEY INDEX
+                //$this->dbforge->add_key('blog_id'); //KEY INDEX
                 $this->dbforge->create_table('user');
 
                 /*
@@ -49,23 +49,23 @@ class Migration_Stock extends CI_Migration {
                 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8
 
                 CREATE TABLE `order_BTC` (
-                  `order_seq` bigint(20) NOT NULL AUTO_INCREMENT,
+                  `od_seq` bigint(20) NOT NULL AUTO_INCREMENT,
                   `user_seq` bigint(20) NOT NULL,
                   `coin_code` varchar(45) NOT NULL,
                   `base_code` varchar(45) NOT NULL,
                   `trade_code` varchar(10) NOT NULL,
-                  `order_status` varchar(10) NOT NULL DEFAULT '01' COMMENT '01:신규, 02:부분체결, 03:전체체결, 04:취소',
-                  `order_price` decimal(65,8) NOT NULL,
-                  `order_qty` decimal(65,8) NOT NULL,
+                  `od_status` varchar(10) NOT NULL DEFAULT '01' COMMENT '01:신규, 02:부분체결, 03:전체체결, 04:취소',
+                  `ord_price` decimal(65,8) NOT NULL,
+                  `ord_qty` decimal(65,8) NOT NULL,
                   `unexe_qty` decimal(65,8) NOT NULL,
                   `update_date` datetime DEFAULT CURRENT_TIMESTAMP,
                   `reg_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                  PRIMARY KEY (`order_seq`)
+                  PRIMARY KEY (`od_seq`)
                 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8
 
                 CREATE TABLE `trade_BTC` (
                   `trd_seq` bigint(20) NOT NULL AUTO_INCREMENT,
-                  `order_seq` bigint(20) NOT NULL,
+                  `od_seq` bigint(20) NOT NULL,
                   `trade_code` varchar(10) NOT NULL,
                   `fuser_seq` bigint(20) NOT NULL,
                   `tuser_seq` bigint(20) NOT NULL,
