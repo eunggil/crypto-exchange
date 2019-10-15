@@ -28,7 +28,8 @@
 		  </div>
 		  <div class="col-sm-6">
 		    <div class="card">
-		      <div class="card-body">
+					<button id='get_wallet'>자산 가져오기</button>
+		      <div class="card-body" id="my_wallet">
 		        	자산
 		      </div>
 		    </div>
@@ -94,7 +95,7 @@
 
     function get_order_book(){
     	$.ajax({
-    		url: 'trade/order_book', // 요청 할 주소
+    		url: 'stock/order_book', // 요청 할 주소
     		//async: true, // false 일 경우 동기 요청으로 변경
     		type: 'POST', // GET, PUT
     		data: {
@@ -121,7 +122,7 @@
 		// 미체결 / 체결 가져오기
 		function get_trade_list(){
 			$.ajax({
-    		url: 'trade/trade_list',
+    		url: 'stock/trade_list',
     		type: 'POST',
     		data: {
     			coin_code: 'BTC'
@@ -129,13 +130,14 @@
     		dataType: 'json',
     		beforeSend: function(jqXHR) {}, // 서버 요청 전 호출 되는 함수 return false; 일 경우 요청 중단
     		success: function(obj) {
-
-					var html = "<table>";
+// console.log(obj);
+					var html = "<table border=1>";
 		    	html += "<tr><td style='width:120px;'> 주문종류 </td>";
 		    	html += "<td style='width:120px;'> 주문번호 </td>";
 		    	html += "<td style='width:120px;'> 주문가격 </td>";
-					html += "<td style='width:120px;'> 주문수량 </td>";
-					html += "<td style='width:120px;'> 주문회원번호 </td>";
+					html += "<td style='width:120px;'> 원<br>주문수량 </td>";
+					html += "<td style='width:120px;'> 미체결<br>주문수량 </td>";
+					html += "<td style='width:120px;'> 주문<br>회원번호 </td>";
 		    	html += "</tr>";
 		    	html += "<br>";
 
@@ -144,16 +146,21 @@
 
 		    	for(key in obj) {
 						if(obj[key]['trade_code'] == 'sell'){
-							html += "<tr style='color:blue;'><td style='width:120px;'>BUY</td>";
+							html += "<tr style='color:blue;'><td style='width:120px;'>매도(SELL)</td>";
 						}else{
-							html += "<tr style='color:red;'><td style='width:120px;'>SELL</td>";
+							html += "<tr style='color:red;'><td style='width:120px;'>매수(BUY)</td>";
 						}
 
-						html += "<td style='width:120px;'>" + obj[key]['od_seq'] + "</td>";
-		    		html += "<td style='width:120px;'>" + obj[key]['ord_price'] + "</td>";
+						html += "<td style='width:120px;'>" + obj[key]['order_seq'] + "</td>";
+		    		html += "<td style='width:120px;'>" + obj[key]['order_price'] + "</td>";
+						html += "<td style='width:120px;'>" + obj[key]['order_qty'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['unexe_qty'] + "</td>";
 						html += "<td style='width:120px;'>" + obj[key]['user_seq'] + "</td>";
 		    		html += "</tr>";
+
+						// base_code: "KRW"
+						// coin_code: "BTC"
+						// order_status: "01"
 		    	}
 
 		    	// for(key in buy) {
@@ -186,7 +193,7 @@
 
     $('#reset_orders').click(function(){
     	$.ajax({
-    		url: 'trade/reset_orders', // 요청 할 주소
+    		url: 'stock/reset_orders', // 요청 할 주소
     		async: true, // false 일 경우 동기 요청으로 변경
     		type: 'POST', // GET, PUT
     		data: {
@@ -206,7 +213,7 @@
 
     $('#set_orders').click(function(){
     	$.ajax({
-    		url: 'trade/set_orders', // 요청 할 주소
+    		url: 'stock/set_orders', // 요청 할 주소
     		async: true, // false 일 경우 동기 요청으로 변경
     		type: 'POST', // GET, PUT
     		data: {
@@ -238,10 +245,11 @@
     	}
 
     	$.ajax({
-    		url: 'trade/'+type, // 요청 할 주소
+    		url: 'stock/order', // 요청 할 주소
     		async: true, // false 일 경우 동기 요청으로 변경
     		type: 'POST', // GET, PUT
     		data: {
+					trade_type : type,
     			coin_code: 'BTC',
     			order_type: type,
     			price : price,
@@ -250,6 +258,7 @@
     		dataType: 'json', // xml, json, script, html
     		beforeSend: function(jqXHR) {}, // 서버 요청 전 호출 되는 함수 return false; 일 경우 요청 중단
     		success: function(jqXHR) {
+					// console.log('order : ' + type);
     			get_order_book();
 					get_trade_list();
     		}, // 요청 완료 시
@@ -257,6 +266,34 @@
     		complete: function(jqXHR) {} // 요청의 실패, 성공과 상관 없이 완료 될 경우 호출
     	});
     }
+
+
+		$('#get_wallet').click(function(){
+    	$.ajax({
+    		url: 'stock/get_wallet', // 요청 할 주소
+    		async: true, // false 일 경우 동기 요청으로 변경
+    		type: 'POST', // GET, PUT
+    		data: {
+    			coin_code: 'BTC'
+    		},
+    		dataType: 'json', // xml, json, script, html
+    		beforeSend: function(jqXHR) {}, // 서버 요청 전 호출 되는 함수 return false; 일 경우 요청 중단
+    		success: function(obj) {
+					var html = "";
+
+		    	for(key in obj) {
+		    		html += "<div> base : " + obj[key]['base'] + "</div>";
+						html += "<div> trade_base : " + obj[key]['trade_base'] + "</div>";
+		    	}
+
+    			$('#my_wallet').html(html);
+    		}, // 요청 완료 시
+    		error: function(jqXHR) {}, // 요청 실패.
+    		complete: function(jqXHR) {} // 요청의 실패, 성공과 상관 없이 완료 될 경우 호출
+    	});
+    });
+
+
 
     $(document).ready(function() {
     	get_order_book();

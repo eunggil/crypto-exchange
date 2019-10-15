@@ -18,4 +18,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </head>
 <body>
 
+	<!-- As a heading -->
+	<nav class="navbar navbar-light bg-light">
+	  <span class="navbar-brand mb-0 h1">STOCK</span>
+	</nav>
 <div id="container">

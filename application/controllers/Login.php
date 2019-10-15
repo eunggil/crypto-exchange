@@ -19,11 +19,11 @@ class Login extends CI_Controller {
       ";
     $result = $this->db->query($sql)->result_array();
 
+		$url = 'http://'.$_SERVER['HTTP_HOST'];
+
     if(!empty($result[0])){
       $this->session->set_userdata('user_seq', $result[0]['user_seq']);
-      $url = 'http://stock.egkang.pe.kr/trade';
-    }else{
-      $url = 'http://stock.egkang.pe.kr';
+			$url .= '/stock';
     }
 
     redirect($url, 'refresh');
